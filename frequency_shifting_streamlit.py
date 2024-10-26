@@ -47,6 +47,22 @@ def calculateAndPlotSpectrogram(signal, sr, title, hlines=None, vlim=None):
     cbar = fig.colorbar(pcol)
     return fig, [Zabs.min(), Zabs.max()]
 
+@st.fragment()
+def downloadZip(buffers, frequency_lower, output_sr):
+    # Create an in-memory zip file
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+        for i, buffer in enumerate(buffers):
+            # Write each buffer to the zip file
+            new_filename = uploaded_files[i].name[:-4] + '_shifted_down_by_%d.wav' % frequency_lower
+            zip_file.writestr(new_filename, buffer.getvalue())
+
+    # Get the bytes of the compressed zip file
+    zip_bytes = zip_buffer.getvalue()
+
+    st.download_button('Download ZIP archive of frequency-shifted mp3 files!', data = zip_bytes,
+                        file_name = 'audio_shifted_by_%d_at_sampling_rate_%d.zip' % (frequency_lower, output_sr))
+
 
 
 st.set_page_config(layout="centered", page_title="Frequency-Shifting App", page_icon="🐢")
@@ -116,7 +132,7 @@ if uploaded_file is not None:
     st.markdown('### Perform frequency-shifting on your dataset:')
 
     st.markdown('Please select the files you would like to be analyzed below. This app will then apply a frequency shift to all audio samples,\
-                resample to the specified sampling rate, and create a ZIP archive that can bedownloaded to your computer.')
+                resample to the specified sampling rate, and create a ZIP archive that can be downloaded to your computer.')
     
     with st.form('Analyze Data'):
         uploaded_files = st.file_uploader("Choose audio files:", accept_multiple_files=True)
@@ -153,16 +169,18 @@ if uploaded_file is not None:
         progress_bar.empty()
         st.markdown('Analysis complete!')
 
-        # Create an in-memory zip file
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-            for i, buffer in enumerate(buffers):
-                # Write each buffer to the zip file
-                new_filename = uploaded_files[i].name[:-4] + '_shifted_down_by_%d.wav' % frequency_lower
-                zip_file.writestr(new_filename, buffer.getvalue())
+        # # Create an in-memory zip file
+        # zip_buffer = io.BytesIO()
+        # with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+        #     for i, buffer in enumerate(buffers):
+        #         # Write each buffer to the zip file
+        #         new_filename = uploaded_files[i].name[:-4] + '_shifted_down_by_%d.wav' % frequency_lower
+        #         zip_file.writestr(new_filename, buffer.getvalue())
 
-        # Get the bytes of the compressed zip file
-        zip_bytes = zip_buffer.getvalue()
+        # # Get the bytes of the compressed zip file
+        # zip_bytes = zip_buffer.getvalue()
 
-        st.download_button('Download ZIP archive of frequency-shifted mp3 files!', data = zip_bytes,
-                           file_name = 'audio_shifted_by_%d_at_sampling_rate_%d.zip' % (frequency_lower, output_sr))
+        # st.download_button('Download ZIP archive of frequency-shifted mp3 files!', data = zip_bytes,
+        #                    file_name = 'audio_shifted_by_%d_at_sampling_rate_%d.zip' % (frequency_lower, output_sr))
+
+        downloadZip(buffers, frequency_lower, output_sr)
