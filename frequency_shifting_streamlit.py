@@ -67,17 +67,16 @@ def downloadZip(buffers, frequency_lower, output_sr):
 
 st.set_page_config(layout="centered", page_title="Frequency-Shifting App", page_icon="🐢")
 
-st.title("Frequency-Shifting App 🐢 🦇 🐬")
+st.title("Frequency-Shifting Audio 🐢 🦇 🐬")
 
-st.markdown('This application performs frequency demodulation on audio samples. First, please select the \
-        frequency range you need for your data, and preview the results on a 10-second \
-        audio sample. Then, select the folder containing your data, and run this \
-        calculation across your dataset.')
+st.markdown('This application performs frequency demodulation on audio samples. The first section shows a visualization for  \
+            a selected frequency range on a 10-second audio sample. The second section runs this calculation across a collection of files,\
+            and creates a .zip archive of the modified samples to be downloaded for further analysis.')
 
 
 # --- load, plot, and listen to the original sample --- #
 
-st.markdown('### Preview for a sample of your dataset:')
+st.markdown('### Preview for an audio sample:')
 
 # get audio from user
 uploaded_file = st.file_uploader("Choose an audio file:", accept_multiple_files=False)
@@ -123,20 +122,22 @@ if uploaded_file is not None:
     st.pyplot(fig_shifted)
 
     # the final resulting audio
-    st.markdown('Here is the resulting frequency-shifted audio sample:')
+    st.markdown('Here is what the resulting frequency-shifted audio sample sounds like:')
     st.audio(demod, sample_rate=sr)
 
 
     ## --- Next section: running in bulk on a dataset! --- ##
 
-    st.markdown('### Perform frequency-shifting on your dataset:')
+    st.markdown('### Perform frequency-shifting on a collection of files:')
 
-    st.markdown('Please select the files you would like to be analyzed below. This app will then apply a frequency shift to all audio samples,\
-                resample to the specified sampling rate, and create a ZIP archive that can be downloaded to your computer.')
+    st.markdown('Once you have chosen a fitting frequency range, please select the files you would like to be analyzed below. \
+                This app will then apply a frequency shift to all audio samples, resample to the specified sampling rate, and \
+                create a ZIP archive that can be downloaded to your computer. Note that the new sampling rate must be at least \
+                twice the highest frequency in the shifted signal.')
     
     with st.form('Analyze Data'):
         uploaded_files = st.file_uploader("Choose audio files:", accept_multiple_files=True)
-        output_sr = st.number_input('Sampling Rate:', min_value = 2 * frequency_upper, max_value = sr, value=sr, step=100)
+        output_sr = st.number_input('Sampling Rate:', min_value = 2 * (frequency_upper - frequency_lower), max_value = sr, value=sr, step=100)
         submitted = st.form_submit_button("Analyze Data")
 
     if submitted and uploaded_files is not None:
@@ -162,8 +163,7 @@ if uploaded_file is not None:
             buffer = io.BytesIO()
             sf.write(buffer, signal_resampled, output_sr, format='wav')
             buffers.append(buffer)
-            #sf.write(file[:-4] + '_shifted_down_by_%d.wav' % frequency_lower, signal_resampled, output_sr)
-
+            
             progress_bar.progress((ind + 1)/len(uploaded_files))
         
         progress_bar.empty()
