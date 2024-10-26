@@ -2,7 +2,8 @@ import streamlit as st
 import soundfile as sf
 import librosa
 import scipy
-import os
+import io
+import zipfile
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -114,27 +115,20 @@ if uploaded_file is not None:
 
     st.markdown('### Perform frequency-shifting on your dataset:')
 
-    st.markdown('Below, please enter the full paths to the folder containing your dataset, and to the folder \
-                where you want the frequency-shifted files to be written. For example, the former might be:')
+    st.markdown('Please select the files you would like to be analyzed below. This app will then apply a frequency shift to all audio samples,\
+                resample to the specified sampling rate, and create a ZIP archive that can bedownloaded to your computer.')
     
-    st.text('/Users/user/Documents/2024/Data/')
+    with st.form('Analyze Data'):
+        uploaded_files = st.file_uploader("Choose audio files:", accept_multiple_files=True)
+        output_sr = st.number_input('Sampling Rate:', min_value = 2 * frequency_upper, max_value = sr, value=sr, step=100)
+        submitted = st.form_submit_button("Analyze Data")
 
-    st.markdown('And maybe the latter is:')
-
-    st.text('/Users/user/Documents/2024/ShiftedData/')
-
-    st.markdown('This app will then \
-                iterate through all files, apply the same frequency-shift as shown above, and write a new file \
-                to the output folder, with the specified sampling rate. Please check that the path is correct -- this is a common source of errors! ')
-
-    # get various input from the user
-    uploaded_files = st.file_uploader("Choose audio files:", accept_multiple_files=True)
-    output_sr = st.number_input('Sampling Rate:', min_value = 2 * frequency_upper, max_value = sr, value=sr, step=100)
-
-    if uploaded_files is not None:
+    if submitted and uploaded_files is not None:
         st.markdown('Uploaded %d files...' % len(uploaded_files))
 
         progress_bar = st.progress(0, text='Analyzing...')
+
+        buffers = []
 
         for ind, file in enumerate(uploaded_files):
             signal, sr = sf.read(file)
@@ -149,8 +143,26 @@ if uploaded_file is not None:
 
             signal_resampled = librosa.resample(signal_shifted, orig_sr=sr, target_sr=output_sr)
 
-            sf.write(file.name[:-4] + '_shifted_down_by_%d.wav' % frequency_lower, signal_resampled, output_sr)
+            buffer = io.BytesIO()
+            sf.write(buffer, signal_resampled, output_sr, format='wav')
+            buffers.append(buffer)
+            #sf.write(file[:-4] + '_shifted_down_by_%d.wav' % frequency_lower, signal_resampled, output_sr)
 
             progress_bar.progress((ind + 1)/len(uploaded_files))
         
         progress_bar.empty()
+        st.markdown('Analysis complete!')
+
+        # Create an in-memory zip file
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+            for i, buffer in enumerate(buffers):
+                # Write each buffer to the zip file
+                new_filename = uploaded_files[i].name[:-4] + '_shifted_down_by_%d.wav' % frequency_lower
+                zip_file.writestr(new_filename, buffer.getvalue())
+
+        # Get the bytes of the compressed zip file
+        zip_bytes = zip_buffer.getvalue()
+
+        st.download_button('Download ZIP archive of frequency-shifted mp3 files!', data = zip_bytes,
+                           file_name = 'audio_shifted_by_%d_at_sampling_rate_%d.zip' % (frequency_lower, output_sr))
