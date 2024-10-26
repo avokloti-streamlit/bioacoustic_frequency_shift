@@ -128,23 +128,16 @@ if uploaded_file is not None:
                 to the output folder, with the specified sampling rate. Please check that the path is correct -- this is a common source of errors! ')
 
     # get various input from the user
-    with st.form('Analyze Data'):
-        data_folder = st.text_input("Path to the folder containing your dataset:")
-        output_folder = st.text_input("Path to the folder for writing frequency-shifted audio:")
-        output_sr = st.number_input('Sampling Rate:', min_value = 2 * frequency_upper, max_value = sr, value=sr, step=100)
-        submitted = st.form_submit_button("Analyze Data")
+    uploaded_files = st.file_uploader("Choose audio files:", accept_multiple_files=True)
+    output_sr = st.number_input('Sampling Rate:', min_value = 2 * frequency_upper, max_value = sr, value=sr, step=100)
 
-    if submitted:
-        files = os.listdir(data_folder)
-        files = [f for f in files if f[-4:] == '.wav' or f[-4:] == '.mp3' or f[-4:] == '.aif']
-
-        st.markdown('Detected %d files...' % len(files))
-        st.text(files)
+    if uploaded_files is not None:
+        st.markdown('Uploaded %d files...' % len(uploaded_files))
 
         progress_bar = st.progress(0, text='Analyzing...')
 
-        for ind, file in enumerate(files):
-            signal, sr = sf.read(data_folder + file)
+        for ind, file in enumerate(uploaded_files):
+            signal, sr = sf.read(file)
 
             signal = butter_bandpass_filter(signal, frequency_lower, frequency_upper, sr, order=5)
 
@@ -156,9 +149,8 @@ if uploaded_file is not None:
 
             signal_resampled = librosa.resample(signal_shifted, orig_sr=sr, target_sr=output_sr)
 
-            sf.write(output_folder + file[:-4] + '_shifted_down_by_%d.wav' % frequency_lower, signal_resampled, output_sr)
+            sf.write(file[:-4] + '_shifted_down_by_%d.wav' % frequency_lower, signal_resampled, output_sr)
 
-            progress_bar.progress((ind + 1)/len(files))
+            progress_bar.progress((ind + 1)/len(uploaded_files))
         
         progress_bar.empty()
-        st.markdown('Analysis complete!')
