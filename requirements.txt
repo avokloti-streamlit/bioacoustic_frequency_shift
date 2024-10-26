@@ -3,5 +3,4 @@ scipy
 soundfile
 librosa
 matplotlib
-io
 zipfile
