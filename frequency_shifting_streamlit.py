@@ -149,7 +149,7 @@ if uploaded_file is not None:
 
             signal_resampled = librosa.resample(signal_shifted, orig_sr=sr, target_sr=output_sr)
 
-            sf.write(file[:-4] + '_shifted_down_by_%d.wav' % frequency_lower, signal_resampled, output_sr)
+            sf.write(file.name[:-4] + '_shifted_down_by_%d.wav' % frequency_lower, signal_resampled, output_sr)
 
             progress_bar.progress((ind + 1)/len(uploaded_files))
         
